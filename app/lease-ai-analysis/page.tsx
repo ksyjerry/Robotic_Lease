@@ -133,10 +133,47 @@ function LeaseAIAnalysisContent() {
       const formData = new FormData();
       formData.append("file", file); // 파일 첨부
   
-      const response = await runAI(formData); // API 호출
-      if (response.status === 200) {
-        setAnalysisComplete(true); // 분석 완료 상태 설정
-        setContractInfo(response.data); // 서버에서 반환된 데이터 설정
+      const response = await runAI(formData);
+      console.log(JSON.stringify(response, null, 2));
+
+
+      if (response.status === 200 && response.data) {
+        const contractData = response.data.data[0];
+
+        setContractInfo({
+          계약번호: contractData.계약번호 || "",
+          리스명: contractData.리스명 || "",
+          거래상대방A: contractData.거래상대방A || "",
+          거래상대방B: contractData.거래상대방B || "",
+          자산구분: contractData.자산구분 || "",
+          비용구분: contractData.비용구분 || "",
+          내부거래여부: contractData.내부거래여부 || "",
+          주석구분: contractData.주석구분 || "",
+          리스개시일: contractData.리스개시일 || "",
+          계약종료일: contractData.계약종료일 || "",
+          리스종료일: contractData.리스종료일 || "",
+          리스변경일: contractData.리스변경일 || "",
+          기간: contractData.기간 || "",
+          고정리스료: contractData.고정리스료 || "",
+          "균등/비균등": contractData["균등/비균등"] || "",
+          증가율: contractData.증가율 || "",
+          증가주기: contractData.증가주기 || "",
+          "선급/후급": contractData["선급/후급"] || "",
+          리스개시기준: contractData.리스개시기준 || "",
+          매수선택권행사가격: contractData.매수선택권행사가격 || "",
+          감가상각기간: contractData.감가상각기간 || "",
+          임차보증금: contractData.임차보증금 || "",
+          자본적지출: contractData.자본적지출 || "",
+          복구원가: contractData.복구원가 || "",
+          손상차손발생일자: contractData.손상차손발생일자 || "",
+          할인율: contractData.할인율 || "",
+          임차보증금할인율: contractData.임차보증금할인율 || "",
+          복구충당부채할인율: contractData.복구충당부채할인율 || "",
+          범위변동: contractData.범위변동 || "",
+        });
+
+        setAnalysisComplete(true); 
+        
         alert("분석이 완료되었습니다!");
       } else {
         alert("분석에 실패했습니다. 다시 시도해주세요.");
