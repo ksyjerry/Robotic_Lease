@@ -12,6 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useRouter } from 'next/navigation'
 import { useLeaseContracts, LeaseContract, LeaseContractProvider } from "@/contexts/LeaseContractContext"
 
+import { FileUploader } from "@/components/FileUploader";
+import { useFilesStore } from "../../store/main";
+import { runAI } from "@/utils/api"
+
 const sidebarNavItems = [
   {
     title: "홈",
@@ -76,7 +80,7 @@ interface ContractInfo {
 
 function LeaseAIAnalysisContent() {
   const { isOpen, toggle } = useSidebar()
-  const [file, setFile] = useState<File | null>(null)
+  const { file } = useFilesStore();
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(false)
   const [showAnalysisResult, setShowAnalysisResult] = useState(false)
@@ -112,57 +116,36 @@ function LeaseAIAnalysisContent() {
     범위변동: ""
   })
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFile(event.target.files[0])
-    }
-  }
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setContractInfo(prev => ({ ...prev, [name]: value === '' ? '' : value }));
   };
 
-  const handleAnalysis = () => {
-    if (file) {
-      setIsAnalyzing(true)
-      setTimeout(() => {
-        setIsAnalyzing(false)
-        setAnalysisComplete(true)
-        setContractInfo({
-          계약번호: "",  // Keep this empty as user needs to input it
-          리스명: "엠디엔타워 사무실 임대차계약",
-          거래상대방A: "하이브",
-          거래상대방B: "하이브아이엠",
-          자산구분: "건물",
-          비용구분: "임대료",
-          내부거래여부: "외부거래",
-          주석구분: "부동산리스",
-          리스개시일: "2022-08-01",
-          계약종료일: "2023-09-30",
-          리스종료일: "2028-09-30",
-          리스변경일: "",
-          기간: "74",
-          고정리스료: "97858933",
-          "균등/비균등": "균등",
-          증가율: "",
-          증가주기: "12개월",
-          "선급/후급": "후급",
-          리스개시기준: "인도/사용시점",
-          매수선택권행사가격: "없음",
-          감가상각기간: "74",
-          임차보증금: "635069587",
-          자본적지출: "",
-          복구원가: "",
-          손상차손발생일자: "",
-          할인율: "",
-          임차보증금할인율: "",
-          복구충당부채할인율: "",
-          범위변동: ""
-        })
-      }, 5000)
-    } else {
-      console.log("선택된 파일이 없습니다.")
+  const handleAnalysis = async () => {
+    if (!file) {
+      alert("분석할 파일을 선택해주세요.");
+      return;
+    }
+  
+    setIsAnalyzing(true); // 로딩 상태 활성화
+  
+    try {
+      const formData = new FormData();
+      formData.append("file", file); // 파일 첨부
+  
+      const response = await runAI(formData); // API 호출
+      if (response.status === 200) {
+        setAnalysisComplete(true); // 분석 완료 상태 설정
+        setContractInfo(response.data); // 서버에서 반환된 데이터 설정
+        alert("분석이 완료되었습니다!");
+      } else {
+        alert("분석에 실패했습니다. 다시 시도해주세요.");
+      }
+    } catch (error) {
+      console.error("분석 중 오류 발생:", error);
+      alert("분석 중 문제가 발생했습니다.");
+    } finally {
+      setIsAnalyzing(false); // 로딩 상태 비활성화
     }
   }
 
@@ -293,20 +276,7 @@ function LeaseAIAnalysisContent() {
                   계약서 업로드
                 </Label>
                 <div className="flex items-center space-x-4">
-                  <Input
-                    id="contract-upload"
-                    type="file"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept=".pdf,application/pdf"
-                  />
-                  <Button onClick={() => document.getElementById('contract-upload')?.click()}>
-                    <Upload className="w-4 h-4 mr-2" />
-                    파일 선택
-                  </Button>
-                  <span className="text-sm text-gray-500">
-                    {file ? file.name : '선택된 파일 없음'}
-                  </span>
+                <FileUploader />
                   <Button onClick={handleAnalysis} disabled={isAnalyzing || !file}>
                     {isAnalyzing ? (
                       <>
