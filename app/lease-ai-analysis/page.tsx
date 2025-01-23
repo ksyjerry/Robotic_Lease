@@ -78,6 +78,15 @@ interface ContractInfo {
   범위변동: string;
 }
 
+// API 응답을 위한 새로운 인터페이스
+interface AIResponse {
+  status: number;
+  data: {
+    data: ContractInfo[];  // ContractInfo 타입 재사용
+    analysis_html: string;
+  }
+}
+
 function LeaseAIAnalysisContent() {
   const { isOpen, toggle } = useSidebar()
   const { file } = useFilesStore();
@@ -115,6 +124,7 @@ function LeaseAIAnalysisContent() {
     복구충당부채할인율: "",
     범위변동: ""
   })
+  const [aiAnalysisHtml, setAiAnalysisHtml] = useState<string>("")
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -133,14 +143,15 @@ function LeaseAIAnalysisContent() {
       const formData = new FormData();
       formData.append("file", file); // 파일 첨부
   
-      const res = await runAI(formData); // API 호출
-      const contractData = res.data.data[0]
-      
+      const res = await runAI(formData);
+      const contractData = res.data.data[0];
+      const analysisHtml = res.data.analysis_html;
+  
       console.log("Contract Data:", contractData);
       // response -> res로 변경
       console.log("Full API Response:", JSON.stringify(res, null, 2));
       console.log("Contract Data from Response:", res.data?.data?.[0]);
-
+      console.log("Analysis HTML:", analysisHtml);
       if (res.status === 200 && res.data) {
         // 백엔드에서 받은 리스 계약 데이터를 `contractInfo` 상태에 반영
         setContractInfo({
@@ -175,8 +186,10 @@ function LeaseAIAnalysisContent() {
           범위변동: contractData.범위변동 || "",
         });
         
-        setAnalysisComplete(true); 
+        // 새로운 HTML 분석 결과 설정
+        setAiAnalysisHtml(analysisHtml);
         
+        setAnalysisComplete(true);
         alert("분석이 완료되었습니다!");
       } else {
         alert("분석에 실패했습니다. 다시 시도해주세요.");
@@ -714,76 +727,18 @@ function LeaseAIAnalysisContent() {
             <DialogTitle className="text-2xl font-bold text-gray-900">AI 분석 결과</DialogTitle>
           </DialogHeader>
           <div className="mt-6 space-y-8">
-            <section>
-              <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">계약서 분석 결과</h3>
-              <div className="space-y-6">
-                <div>
-                  <h4 className="text-lg font-semibold mb-3 text-gray-700">리스 해당 여부 분석:</h4>
-                  <ul className="list-disc pl-5 space-y-2 text-gray-600">
-                    <li><span className="font-medium text-gray-700">식별된 자산:</span> 서울특별시 강남구 테헤란로 108길 42에 위치한 엠디엔타워 지상 2층</li>
-                    <li><span className="font-medium text-gray-700">사용통제권:</span> 계약서 제1조에 따라 전차인은 해당 목적물을 전용으로 사용할 권리가 있음</li>
-                    <li><span className="font-medium text-gray-700">대가:</span> 보증금과 월 임대료가 명시되어 있음</li>
-                    <li><span className="font-medium text-gray-700">기간:</span> 명확한 리스기간이 설정되어 있음 (2022.8.1 ~ 2023.9.30)</li>
-                  </ul>
-                  <p className="mt-3 font-semibold text-green-600">→ IFRS 16의 리스 정의 요건을 충족하므로 리스에 해당함</p>
-                </div>
+            {aiAnalysisHtml ? (
+              <div 
+                className="analysis-content"
+                dangerouslySetInnerHTML={{ 
+                  __html: aiAnalysisHtml.replace(/className=/g, 'class=')  // className을 class로 변환
+                }} 
+              />
+            ) : (
+              <div className="text-center text-gray-500">
+                분석 결과가 없습니다.
               </div>
-            </section>
-
-            <section>
-              <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">주요 계약 정보</h3>
-              <div className="space-y-4 text-gray-600">
-                <p><span className="font-medium text-gray-700">리스명:</span> 엠디엔타워 사무실 임대차계약</p>
-                <div>
-                  <p className="font-medium text-gray-700 mb-2">리스기간:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>최초계약: 2022.8.1 ~ 2023.9.30 (14개월)</li>
-                    <li>자동연장옵션: 계약만료 30일 전까지 별도 의사표시 없으면 1년씩 자동연장</li>
-                    <li>최대 가능 연장기간: 2028.9.30까지</li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700 mb-2">리스금액:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>보증금: ￦635,069,587</li>
-                    <li>월 임대료: ￦97,858,933</li>
-                  </ul>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">사용자(리스이용자) 주의사항</h3>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-lg font-semibold mb-2 text-gray-700">계약 관련:</h4>
-                  <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                    <li>전대차 금지 조항: 임대인의 사전 동의 없이 제3자 사용 금지</li>
-                    <li>용도제한: 계약서상 정해진 용도로만 사용해야 함</li>
-                    <li>원상복구 의무: 계약 종료/해지 시 원상복구 필요</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-lg font-semibold mb-2 text-gray-700">비용 관련:</h4>
-                  <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                    <li>관리비 정산: 실제 사용량에 따른 추가정산 가능성</li>
-                    <li>연체료: 지연손해금 부과 가능성</li>
-                    <li>공과금 및 제세공과금 부담 책임</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-lg font-semibold mb-2 text-gray-700">계약 해지 관련:</h4>
-                  <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                    <li>계약해지 사유 숙지 필요</li>
-                    <li>해지 시 위약금 및 손해배상 책임 발생 가능</li>
-                  </ul>
-                </div>
-              </div>
-            </section>
-
-            <p className="mt-6 text-gray-700 font-medium bg-yellow-100 p-4 rounded-md">
-              이러한 조항들은 재무적, 운영적으로 중요한 영향을 미칠 수 있으므로 특별한 주의가 필요합니다.
-            </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>

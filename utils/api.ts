@@ -9,7 +9,6 @@ export const axiosClient = (
   return axios.create({
     baseURL: `http://127.0.0.1:8000/`,
     // baseURL: `http://10.137.150.164:8080/`,
-    timeout: 30000,
     headers: {
       "Content-Type": contentType,
     },
