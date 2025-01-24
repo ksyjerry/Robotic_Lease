@@ -30,3 +30,10 @@ export const runAI = async (value: any) => {
     throw error;
   }
 };
+
+// 새로 추가된 부분 저장
+export const saveLeaseContract = async (leaseData: any) => {
+  const apiClient = await axiosClient("text");
+  const res = await apiClient.post("/save/", leaseData);
+  return res;
+};

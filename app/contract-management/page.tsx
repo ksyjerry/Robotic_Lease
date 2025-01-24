@@ -8,7 +8,7 @@ import { useSidebar, SidebarProvider } from "@/components/sidebar-provider"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { dummyContracts } from "@/data/dummy-contracts"
+import { dummyContracts } from '@/data/dummy-contracts'
 import { formatCurrency, formatDate, formatPercent } from "@/utils/format"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -422,7 +422,7 @@ interface ContractDetail {
   annualDiscountRate: number;
   depositDiscountRate: number;
   recoveryDiscountRate: number;
-  rangeChange: string | null;
+  rangeChange: number | null;
 }
 
 // **테스트용 초기 selectedContract 값 설정**
@@ -485,6 +485,46 @@ function ContractManagementContent() {
 
   // ✅ 특정 계약의 상세 정보 가져오기
   const fetchContractDetail = (requestId: number) => {
+
+    if (requestId <= -1) {
+      const foundContract = dummyContracts.find(contract => contract.id === requestId);
+      if (foundContract) {
+        setSelectedContract({
+          id: foundContract.id,
+          refNo: foundContract.refNo || "",
+          name: foundContract.name || "",
+          description: foundContract.description || "",
+          counterparty: foundContract.counterparty || "",
+          assetType: foundContract.assetType || "",
+          costType: foundContract.costType || "",
+          isInternalTransaction: foundContract.isInternalTransaction ?? false,
+          noteType: foundContract.noteType || "",
+          leaseStartDate: foundContract.leaseStartDate || "",
+          contractEndDate: foundContract.contractEndDate || "",
+          leaseEndDate: foundContract.leaseEndDate || "",
+          modificationDate: foundContract.modificationDate || null,
+          periodMonths: foundContract.periodMonths || 0,
+          monthlyFixedPayment: foundContract.monthlyFixedPayment || 0,
+          paymentType: foundContract.paymentType || "균등",
+          increaseRate: foundContract.increaseRate || null,
+          increaseCycle: foundContract.increaseCycle || null,
+          paymentTiming: foundContract.paymentTiming || "후급",
+          leaseStartStandard: foundContract.leaseStartStandard || "월말",
+          purchaseOptionPrice: foundContract.purchaseOptionPrice || null,
+          depreciationPeriodMonths: foundContract.depreciationPeriodMonths || 0,
+          deposit: foundContract.deposit || 0,
+          capitalExpenditure: foundContract.capitalExpenditure || 0,
+          recoveryCost: foundContract.recoveryCost || 0,
+          impairmentDate: foundContract.impairmentDate || null,
+          annualDiscountRate: foundContract.annualDiscountRate || 0,
+          depositDiscountRate: foundContract.depositDiscountRate || 0,
+          recoveryDiscountRate: foundContract.recoveryDiscountRate || 0,
+          rangeChange: foundContract.rangeChange || null
+        });
+      }
+      return; // 백엔드 요청 없이 종료
+    }
+
     axiosClient("text")
       .get(`/requests/detail/`, {
         params: { request_id: requestId }
@@ -541,7 +581,7 @@ function ContractManagementContent() {
 
     const indexOfLastContract = currentPage * contractsPerPage
     const indexOfFirstContract = indexOfLastContract - contractsPerPage
-    const currentContracts = contracts.slice(indexOfFirstContract, indexOfLastContract).map(contract => contract as LeaseContract)
+    const currentContracts = [...dummyContracts, ...contracts].slice(indexOfFirstContract, indexOfLastContract).map(contract => contract as LeaseContract)
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
 
@@ -615,7 +655,7 @@ function ContractManagementContent() {
                 </Table>
               </div>
               <div className="mt-4 flex justify-center">
-                {Array.from({ length: Math.ceil((contracts.length) / contractsPerPage) }, (_, i) => (
+                {Array.from({ length: Math.ceil((contracts.length + dummyContracts.length) / contractsPerPage) }, (_, i) => (
                   <Button
                     key={i}
                     onClick={() => paginate(i + 1)}

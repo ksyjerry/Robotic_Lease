@@ -2,7 +2,7 @@ import { LeaseContract } from "../types/contract";
 
 export const dummyContracts: LeaseContract[] = [
   {
-    id: 1,
+    id: -1,
     refNo: "L2023-001",
     name: "서울 강남 사무실 임대",
     description: "강남 테헤란로 사무실 임대 계약",
@@ -34,7 +34,7 @@ export const dummyContracts: LeaseContract[] = [
     rangeChange: null
   },
   {
-    id: 2,
+    id: -2,
     refNo: "L2023-002",
     name: "전기차 리스 계약",
     description: "업무용 전기차 5대 리스",
@@ -66,7 +66,7 @@ export const dummyContracts: LeaseContract[] = [
     rangeChange: null
   },
   {
-    id: 3,
+    id: -3,
     refNo: "L2023-003",
     name: "데이터센터 임대",
     description: "판교 데이터센터 임대 계약",
@@ -98,7 +98,7 @@ export const dummyContracts: LeaseContract[] = [
     rangeChange: null
   },
   {
-    id: 4,
+    id: -4,
     refNo: "L2023-004",
     name: "물류창고 임대",
     description: "경기도 이천 물류창고 임대",
@@ -130,7 +130,7 @@ export const dummyContracts: LeaseContract[] = [
     rangeChange: null
   },
   {
-    id: 5,
+    id: -5,
     refNo: "L2023-005",
     name: "사무용 IT장비 리스",
     description: "노트북 및 데스크탑 200대 리스",
@@ -162,7 +162,7 @@ export const dummyContracts: LeaseContract[] = [
     rangeChange: null
   },
   {
-    id: 6,
+    id: -6,
     refNo: "L2023-006",
     name: "부산 지사 사무실",
     description: "부산 센텀시티 사무실 임대",
@@ -194,7 +194,7 @@ export const dummyContracts: LeaseContract[] = [
     rangeChange: null
   },
   {
-    id: 7,
+    id: -7,
     refNo: "L2023-007",
     name: "대전 연구소 임대",
     description: "대전 연구개발특구 연구소 임대",
@@ -226,7 +226,7 @@ export const dummyContracts: LeaseContract[] = [
     rangeChange: null
   },
   {
-    id: 8,
+    id: -8,
     refNo: "L2023-008",
     name: "상업용 프린터 리스",
     description: "고성능 상업용 프린터 5대 리스",
@@ -258,7 +258,7 @@ export const dummyContracts: LeaseContract[] = [
     rangeChange: null
   },
   {
-    id: 9,
+    id: -9,
     refNo: "L2023-009",
     name: "광주 지사 사무실",
     description: "광주 상무지구 사무실 임대",
@@ -290,7 +290,7 @@ export const dummyContracts: LeaseContract[] = [
     rangeChange: null
   },
   {
-    id: 10,
+    id: -10,
     refNo: "L2023-010",
     name: "서버 장비 리스",
     description: "고성능 서버 20대 리스",

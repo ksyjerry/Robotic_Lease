@@ -14,7 +14,7 @@ import { useLeaseContracts, LeaseContract, LeaseContractProvider } from "@/conte
 
 import { FileUploader } from "@/components/FileUploader";
 import { useFilesStore } from "../../store/main";
-import { runAI } from "@/utils/api"
+import { runAI, saveLeaseContract } from '@/utils/api';
 
 const sidebarNavItems = [
   {
@@ -46,7 +46,8 @@ const sidebarNavItems = [
 
 // ContractInfo 인터페이스 정의
 interface ContractInfo {
-  [key: string]: string;  // 문자열 인덱스 시그니처 추가
+  id : number;
+  [key: string]: string | number;  // 문자열 인덱스 시그니처 추가
   계약번호: string;
   리스명: string;
   자산구분: string;
@@ -94,6 +95,7 @@ function LeaseAIAnalysisContent() {
   const [analysisComplete, setAnalysisComplete] = useState(false)
   const [showAnalysisResult, setShowAnalysisResult] = useState(false)
   const [contractInfo, setContractInfo] = useState<ContractInfo>({
+    id: 0,
     계약번호: "",
     리스명: "",
     거래상대방A: "",
@@ -144,6 +146,7 @@ function LeaseAIAnalysisContent() {
       formData.append("file", file); // 파일 첨부
   
       const res = await runAI(formData);
+      const requestId = res.data.request_id;
       const contractData = res.data.data[0];
       const analysisHtml = res.data.analysis_html;
   
@@ -155,6 +158,7 @@ function LeaseAIAnalysisContent() {
       if (res.status === 200 && res.data) {
         // 백엔드에서 받은 리스 계약 데이터를 `contractInfo` 상태에 반영
         setContractInfo({
+          id: requestId,
           계약번호: contractData.계약번호 || "",
           리스명: contractData.리스명 || "",
           거래상대방A: contractData.거래상대방A || "",
@@ -188,7 +192,7 @@ function LeaseAIAnalysisContent() {
         
         // 새로운 HTML 분석 결과 설정
         setAiAnalysisHtml(analysisHtml);
-        
+
         setAnalysisComplete(true);
         alert("분석이 완료되었습니다!");
       } else {
@@ -205,7 +209,7 @@ function LeaseAIAnalysisContent() {
   const router = useRouter()
   const { addLeaseContract } = useLeaseContracts()
 
-  const handleLeaseRegistration = () => {
+  const handleLeaseRegistration = async() => {
     const requiredFields = ['계약번호', '리스명', '자산구분', '비용구분', '리스개시일', '리스종료일', '기간', '선급/후급', '리스개시기준', '감가상각기간', '할인율'];
     const missingFields = requiredFields.filter(field => !contractInfo[field]);
     
@@ -216,7 +220,7 @@ function LeaseAIAnalysisContent() {
 
     if (analysisComplete) {
       const newContract: LeaseContract = {
-        id: Date.now(),
+        id: contractInfo.id,
         refNo: `L${Date.now()}`, // Generate a unique reference number
         name: contractInfo.리스명,
         description: "",
@@ -247,9 +251,14 @@ function LeaseAIAnalysisContent() {
         recoveryDiscountRate: parseFloat(contractInfo.복구충당부채할인율) || 0,
         rangeChange: parseFloat(contractInfo.범위변동) || 0,
       }
-      addLeaseContract(newContract)
-      router.push('/contract-management')
-    } else {
+      try{
+        const response = await saveLeaseContract(newContract);
+        router.push('/contract-management')
+      }catch (error) {
+        console.error("리스 계약 저장 중 오류 발생:", error);
+        alert("리스 계약 저장 중 오류가 발생했습니다.");
+      }
+    }else {
       alert('AI 분석을 완료한 후 리스를 등록해 주세요.')
     }
   }
@@ -457,7 +466,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="리스개시일"
                       name="리스개시일"
-                      // type="date"
                       value={contractInfo.리스개시일 || ""}
                       onChange={handleInputChange}
                       required
@@ -468,7 +476,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="contract-end-date"
                       name="계약종료일"
-                      // type="date"
                       value={contractInfo.계약종료일 || ""}
                       onChange={handleInputChange}
                     />
@@ -480,7 +487,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="리스종료일"
                       name="리스종료일"
-                      // type="date"
                       value={contractInfo.리스종료일 || ""}
                       onChange={handleInputChange}
                       required
@@ -491,7 +497,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="modification-date"
                       name="리스변경일"
-                      // type="date"
                       value={contractInfo.리스변경일 || ""}
                       onChange={handleInputChange}
                     />
@@ -503,7 +508,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="기간"
                       name="기간"
-                      // type="number"
                       value={contractInfo.기간 || ""}
                       onChange={handleInputChange}
                       required
@@ -521,7 +525,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="monthly-fixed-payment"
                       name="고정리스료"
-                      // type="number"
                       value={contractInfo.고정리스료 || ""}
                       onChange={handleInputChange}
                     />
@@ -540,7 +543,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="increase-rate"
                       name="증가율"
-                      // type="number"
                       step="0.01"
                       value={contractInfo.증가율 || ""}
                       onChange={handleInputChange}
@@ -612,7 +614,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="감가상각기간"
                       name="감가상각기간"
-                      // type="number"
                       value={contractInfo.감가상각기간 || ""}
                       onChange={handleInputChange}
                       required
@@ -623,7 +624,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="deposit"
                       name="임차보증금"
-                      // type="number"
                       value={contractInfo.임차보증금 || ""}
                       onChange={handleInputChange}
                     />
@@ -633,7 +633,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="capital-expenditure"
                       name="자본적지출"
-                      // type="number"
                       value={contractInfo.자본적지출 || ""}
                       onChange={handleInputChange}
                     />
@@ -643,7 +642,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="recovery-cost"
                       name="복구원가"
-                      // type="number"
                       value={contractInfo.복구원가 || ""}
                       onChange={handleInputChange}
                     />
@@ -653,7 +651,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="impairment-date"
                       name="손상차손발생일자"
-                      // type="date"
                       value={contractInfo.손상차손발생일자 || ""}
                       onChange={handleInputChange}
                     />
@@ -672,7 +669,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="할인율"
                       name="할인율"
-                      // type="number"
                       step="0.01"
                       value={contractInfo.할인율 || ""}
                       onChange={handleInputChange}
@@ -684,7 +680,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="deposit-discount-rate"
                       name="임차보증금할인율"
-                      // type="number"
                       step="0.01"
                       value={contractInfo.임차보증금할인율 || ""}
                       onChange={handleInputChange}
@@ -695,7 +690,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="recovery-discount-rate"
                       name="복구충당부채할인율"
-                      // type="number"
                       step="0.01"
                       value={contractInfo.복구충당부채할인율 || ""}
                       onChange={handleInputChange}
@@ -706,7 +700,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="range-change"
                       name="범위변동"
-                      // type="number"
                       step="0.01"
                       value={contractInfo.범위변동 || ""}
                       onChange={handleInputChange}
