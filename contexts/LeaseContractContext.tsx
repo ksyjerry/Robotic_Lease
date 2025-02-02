@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState } from 'react';
 
 export interface LeaseContract {
   id: number;
+  fileName: string;
   refNo: string;
   name: string;
   description: string;

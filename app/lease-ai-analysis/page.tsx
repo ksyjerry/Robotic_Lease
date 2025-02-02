@@ -47,7 +47,8 @@ const sidebarNavItems = [
 // ContractInfo 인터페이스 정의
 interface ContractInfo {
   id : number;
-  [key: string]: string | number;  // 문자열 인덱스 시그니처 추가
+  파일이름 : string;
+  [key: string]: string | number;  /// 문자열 인덱스 시그니처 추가
   계약번호: string;
   리스명: string;
   자산구분: string;
@@ -96,6 +97,7 @@ function LeaseAIAnalysisContent() {
   const [showAnalysisResult, setShowAnalysisResult] = useState(false)
   const [contractInfo, setContractInfo] = useState<ContractInfo>({
     id: 0,
+    파일이름:"",
     계약번호: "",
     리스명: "",
     거래상대방A: "",
@@ -147,6 +149,7 @@ function LeaseAIAnalysisContent() {
   
       const res = await runAI(formData);
       const requestId = res.data.request_id;
+      const fileName = res.data.file_name;
       const contractData = res.data.data[0];
       const analysisHtml = res.data.analysis_html;
   
@@ -159,6 +162,7 @@ function LeaseAIAnalysisContent() {
         // 백엔드에서 받은 리스 계약 데이터를 `contractInfo` 상태에 반영
         setContractInfo({
           id: requestId,
+          파일이름: fileName,
           계약번호: contractData.계약번호 || "",
           리스명: contractData.리스명 || "",
           거래상대방A: contractData.거래상대방A || "",
@@ -221,6 +225,7 @@ function LeaseAIAnalysisContent() {
     if (analysisComplete) {
       const newContract: LeaseContract = {
         id: contractInfo.id,
+        fileName: contractInfo.파일이름,
         refNo: `L${Date.now()}`, // Generate a unique reference number
         name: contractInfo.리스명,
         description: "",

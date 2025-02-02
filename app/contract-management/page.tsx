@@ -647,8 +647,8 @@ function ContractManagementContent() {
                       >
                         <TableCell>{contract.id}</TableCell>
                         <TableCell>{contract.name}</TableCell>
-                        <TableCell>{formatDate(contract.leaseStartDate)} ~ {formatDate(contract.leaseEndDate)}</TableCell>
-                        <TableCell>{formatCurrency(contract.monthlyFixedPayment)}원/월</TableCell>
+                        <TableCell>{/*formatDate*/(contract.leaseStartDate)} ~ {/*formatDate*/(contract.leaseEndDate)}</TableCell>
+                        <TableCell>{/*formatCurrency*/(contract.monthlyFixedPayment)}원/월</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -709,17 +709,17 @@ function ContractManagementContent() {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="font-semibold text-gray-600">리스개시일</Label>
-                            <p className="text-lg">{formatDate(selectedContract.leaseStartDate)}</p>
+                            <p className="text-lg">{/*formatDate*/(selectedContract.leaseStartDate)}</p>
                           </div>
                           <div>
                             <Label className="font-semibold text-gray-600">리스종료일</Label>
-                            <p className="text-lg">{formatDate(selectedContract.leaseEndDate)}</p>
+                            <p className="text-lg">{/*formatDate*/(selectedContract.leaseEndDate)}</p>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="font-semibold text-gray-600">리스변경일</Label>
-                            <p className="text-lg">{formatDate(selectedContract.modificationDate)}</p>
+                            <p className="text-lg">{/*formatDate*/(selectedContract.modificationDate)}</p>
                           </div>
                           <div>
                             <Label className="font-semibold text-gray-600">기간(월)</Label>
@@ -738,7 +738,7 @@ function ContractManagementContent() {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="font-semibold text-gray-600">고정리스료(월)</Label>
-                            <p className="text-lg">{formatCurrency(selectedContract.monthlyFixedPayment)}원</p>
+                            <p className="text-lg">{/*formatCurrency*/(selectedContract.monthlyFixedPayment)}원</p>
                           </div>
                           <div>
                             <Label className="font-semibold text-gray-600">균등/비균등</Label>
@@ -767,16 +767,16 @@ function ContractManagementContent() {
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="font-semibold text-gray-600">임차보증금</Label>
-                            <p className="text-lg">{formatCurrency(selectedContract.deposit)}원</p>
+                            <p className="text-lg">{/*formatCurrency*/(selectedContract.deposit)}원</p>
                           </div>
                           <div>
                             <Label className="font-semibold text-gray-600">자본적지출</Label>
-                            <p className="text-lg">{formatCurrency(selectedContract.capitalExpenditure)}원</p>
+                            <p className="text-lg">{/*formatCurrency*/(selectedContract.capitalExpenditure)}원</p>
                           </div>
                         </div>
                         <div>
                           <Label className="font-semibold text-gray-600">복구원가</Label>
-                          <p className="text-lg">{formatCurrency(selectedContract.recoveryCost)}원</p>
+                          <p className="text-lg">{/*formatCurrency*/(selectedContract.recoveryCost)}원</p>
                         </div>
                       </div>
                     </div>
