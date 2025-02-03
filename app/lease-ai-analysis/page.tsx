@@ -12,6 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useRouter } from 'next/navigation'
 import { useLeaseContracts, LeaseContract, LeaseContractProvider } from "@/contexts/LeaseContractContext"
 
+import { FileUploader } from "@/components/FileUploader";
+import { useFilesStore } from "../../store/main";
+import { runAI, saveLeaseContract } from '@/utils/api';
+
 const sidebarNavItems = [
   {
     title: "홈",
@@ -42,7 +46,9 @@ const sidebarNavItems = [
 
 // ContractInfo 인터페이스 정의
 interface ContractInfo {
-  [key: string]: string;  // 문자열 인덱스 시그니처 추가
+  id : number;
+  파일이름 : string;
+  [key: string]: string | number;  /// 문자열 인덱스 시그니처 추가
   계약번호: string;
   리스명: string;
   자산구분: string;
@@ -74,13 +80,24 @@ interface ContractInfo {
   범위변동: string;
 }
 
+// API 응답을 위한 새로운 인터페이스
+interface AIResponse {
+  status: number;
+  data: {
+    data: ContractInfo[];  // ContractInfo 타입 재사용
+    analysis_html: string;
+  }
+}
+
 function LeaseAIAnalysisContent() {
   const { isOpen, toggle } = useSidebar()
-  const [file, setFile] = useState<File | null>(null)
+  const { file } = useFilesStore();
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisComplete, setAnalysisComplete] = useState(false)
   const [showAnalysisResult, setShowAnalysisResult] = useState(false)
   const [contractInfo, setContractInfo] = useState<ContractInfo>({
+    id: 0,
+    파일이름:"",
     계약번호: "",
     리스명: "",
     거래상대방A: "",
@@ -111,65 +128,92 @@ function LeaseAIAnalysisContent() {
     복구충당부채할인율: "",
     범위변동: ""
   })
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFile(event.target.files[0])
-    }
-  }
+  const [aiAnalysisHtml, setAiAnalysisHtml] = useState<string>("")
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setContractInfo(prev => ({ ...prev, [name]: value === '' ? '' : value }));
   };
 
-  const handleAnalysis = () => {
-    if (file) {
-      setIsAnalyzing(true)
-      setTimeout(() => {
-        setIsAnalyzing(false)
-        setAnalysisComplete(true)
-        setContractInfo({
-          계약번호: "",  // Keep this empty as user needs to input it
-          리스명: "엠디엔타워 사무실 임대차계약",
-          거래상대방A: "하이브",
-          거래상대방B: "하이브아이엠",
-          자산구분: "건물",
-          비용구분: "임대료",
-          내부거래여부: "외부거래",
-          주석구분: "부동산리스",
-          리스개시일: "2022-08-01",
-          계약종료일: "2023-09-30",
-          리스종료일: "2028-09-30",
-          리스변경일: "",
-          기간: "74",
-          고정리스료: "97858933",
-          "균등/비균등": "균등",
-          증가율: "",
-          증가주기: "12개월",
-          "선급/후급": "후급",
-          리스개시기준: "인도/사용시점",
-          매수선택권행사가격: "없음",
-          감가상각기간: "74",
-          임차보증금: "635069587",
-          자본적지출: "",
-          복구원가: "",
-          손상차손발생일자: "",
-          할인율: "",
-          임차보증금할인율: "",
-          복구충당부채할인율: "",
-          범위변동: ""
-        })
-      }, 5000)
-    } else {
-      console.log("선택된 파일이 없습니다.")
+  const handleAnalysis = async () => {
+    if (!file) {
+      alert("분석할 파일을 선택해주세요.");
+      return;
     }
+  
+    setIsAnalyzing(true); // 로딩 상태 활성화
+  
+    try {
+      const formData = new FormData();
+      formData.append("file", file); // 파일 첨부
+  
+      const res = await runAI(formData);
+      const requestId = res.data.request_id;
+      const fileName = res.data.file_name;
+      const contractData = res.data.data[0];
+      const analysisHtml = res.data.analysis_html;
+  
+      console.log("Contract Data:", contractData);
+      // response -> res로 변경
+      console.log("Full API Response:", JSON.stringify(res, null, 2));
+      console.log("Contract Data from Response:", res.data?.data?.[0]);
+      console.log("Analysis HTML:", analysisHtml);
+      if (res.status === 200 && res.data) {
+        // 백엔드에서 받은 리스 계약 데이터를 `contractInfo` 상태에 반영
+        setContractInfo({
+          id: requestId,
+          파일이름: fileName,
+          계약번호: contractData.계약번호 || "",
+          리스명: contractData.리스명 || "",
+          거래상대방A: contractData.거래상대방A || "",
+          거래상대방B: contractData.거래상대방B || "",
+          자산구분: contractData.자산구분 || "",
+          비용구분: contractData.비용구분 || "",
+          내부거래여부: contractData.내부거래여부 || "",
+          주석구분: contractData.주석구분 || "",
+          리스개시일: contractData.리스개시일 || "",
+          계약종료일: contractData.계약종료일 || "",
+          리스종료일: contractData.리스종료일 || "",
+          리스변경일: contractData.리스변경일 || "",
+          기간: contractData.기간 || "",
+          고정리스료: contractData.고정리스료 || "",
+          "균등/비균등": contractData["균등/비균등"] || "",
+          증가율: contractData.증가율 || "",
+          증가주기: contractData.증가주기 || "",
+          "선급/후급": contractData["선급/후급"] || "",
+          리스개시기준: contractData.리스개시기준 || "",
+          매수선택권행사가격: contractData.매수선택권행사가격 || "",
+          감가상각기간: contractData.감가상각기간 || "",
+          임차보증금: contractData.임차보증금 || "",
+          자본적지출: contractData.자본적지출 || "",
+          복구원가: contractData.복구원가 || "",
+          손상차손발생일자:contractData.손상차손발생일자 || "",
+          할인율: contractData.할인율 || "",
+          임차보증금할인율: contractData.임차보증금할인율 || "",
+          복구충당부채할인율: contractData.복구충당부채할인율 || "",
+          범위변동: contractData.범위변동 || "",
+        });
+        
+        // 새로운 HTML 분석 결과 설정
+        setAiAnalysisHtml(analysisHtml);
+
+        setAnalysisComplete(true);
+        alert("분석이 완료되었습니다!");
+      } else {
+        alert("분석에 실패했습니다. 다시 시도해주세요.");
+      }
+    } catch (error) {
+      console.error("분석 중 오류 발생:", error);
+      alert("분석 중 문제가 발생했습니다.");
+    } finally {
+      setIsAnalyzing(false); // 로딩 상태 비활성화
+  }
   }
 
   const router = useRouter()
   const { addLeaseContract } = useLeaseContracts()
 
-  const handleLeaseRegistration = () => {
+  const handleLeaseRegistration = async() => {
     const requiredFields = ['계약번호', '리스명', '자산구분', '비용구분', '리스개시일', '리스종료일', '기간', '선급/후급', '리스개시기준', '감가상각기간', '할인율'];
     const missingFields = requiredFields.filter(field => !contractInfo[field]);
     
@@ -180,7 +224,8 @@ function LeaseAIAnalysisContent() {
 
     if (analysisComplete) {
       const newContract: LeaseContract = {
-        id: Date.now(),
+        id: contractInfo.id,
+        fileName: contractInfo.파일이름,
         refNo: `L${Date.now()}`, // Generate a unique reference number
         name: contractInfo.리스명,
         description: "",
@@ -211,9 +256,14 @@ function LeaseAIAnalysisContent() {
         recoveryDiscountRate: parseFloat(contractInfo.복구충당부채할인율) || 0,
         rangeChange: parseFloat(contractInfo.범위변동) || 0,
       }
-      addLeaseContract(newContract)
-      router.push('/contract-management')
-    } else {
+      try{
+        const response = await saveLeaseContract(newContract);
+        router.push('/contract-management')
+      }catch (error) {
+        console.error("리스 계약 저장 중 오류 발생:", error);
+        alert("리스 계약 저장 중 오류가 발생했습니다.");
+      }
+    }else {
       alert('AI 분석을 완료한 후 리스를 등록해 주세요.')
     }
   }
@@ -293,20 +343,7 @@ function LeaseAIAnalysisContent() {
                   계약서 업로드
                 </Label>
                 <div className="flex items-center space-x-4">
-                  <Input
-                    id="contract-upload"
-                    type="file"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    accept=".pdf,application/pdf"
-                  />
-                  <Button onClick={() => document.getElementById('contract-upload')?.click()}>
-                    <Upload className="w-4 h-4 mr-2" />
-                    파일 선택
-                  </Button>
-                  <span className="text-sm text-gray-500">
-                    {file ? file.name : '선택된 파일 없음'}
-                  </span>
+                <FileUploader />
                   <Button onClick={handleAnalysis} disabled={isAnalyzing || !file}>
                     {isAnalyzing ? (
                       <>
@@ -434,7 +471,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="리스개시일"
                       name="리스개시일"
-                      type="date"
                       value={contractInfo.리스개시일 || ""}
                       onChange={handleInputChange}
                       required
@@ -445,7 +481,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="contract-end-date"
                       name="계약종료일"
-                      type="date"
                       value={contractInfo.계약종료일 || ""}
                       onChange={handleInputChange}
                     />
@@ -457,7 +492,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="리스종료일"
                       name="리스종료일"
-                      type="date"
                       value={contractInfo.리스종료일 || ""}
                       onChange={handleInputChange}
                       required
@@ -468,7 +502,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="modification-date"
                       name="리스변경일"
-                      type="date"
                       value={contractInfo.리스변경일 || ""}
                       onChange={handleInputChange}
                     />
@@ -480,7 +513,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="기간"
                       name="기간"
-                      type="number"
                       value={contractInfo.기간 || ""}
                       onChange={handleInputChange}
                       required
@@ -498,7 +530,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="monthly-fixed-payment"
                       name="고정리스료"
-                      type="number"
                       value={contractInfo.고정리스료 || ""}
                       onChange={handleInputChange}
                     />
@@ -517,7 +548,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="increase-rate"
                       name="증가율"
-                      type="number"
                       step="0.01"
                       value={contractInfo.증가율 || ""}
                       onChange={handleInputChange}
@@ -589,7 +619,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="감가상각기간"
                       name="감가상각기간"
-                      type="number"
                       value={contractInfo.감가상각기간 || ""}
                       onChange={handleInputChange}
                       required
@@ -600,7 +629,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="deposit"
                       name="임차보증금"
-                      type="number"
                       value={contractInfo.임차보증금 || ""}
                       onChange={handleInputChange}
                     />
@@ -610,7 +638,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="capital-expenditure"
                       name="자본적지출"
-                      type="number"
                       value={contractInfo.자본적지출 || ""}
                       onChange={handleInputChange}
                     />
@@ -620,7 +647,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="recovery-cost"
                       name="복구원가"
-                      type="number"
                       value={contractInfo.복구원가 || ""}
                       onChange={handleInputChange}
                     />
@@ -630,7 +656,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="impairment-date"
                       name="손상차손발생일자"
-                      type="date"
                       value={contractInfo.손상차손발생일자 || ""}
                       onChange={handleInputChange}
                     />
@@ -649,7 +674,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="할인율"
                       name="할인율"
-                      type="number"
                       step="0.01"
                       value={contractInfo.할인율 || ""}
                       onChange={handleInputChange}
@@ -661,7 +685,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="deposit-discount-rate"
                       name="임차보증금할인율"
-                      type="number"
                       step="0.01"
                       value={contractInfo.임차보증금할인율 || ""}
                       onChange={handleInputChange}
@@ -672,7 +695,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="recovery-discount-rate"
                       name="복구충당부채할인율"
-                      type="number"
                       step="0.01"
                       value={contractInfo.복구충당부채할인율 || ""}
                       onChange={handleInputChange}
@@ -683,7 +705,6 @@ function LeaseAIAnalysisContent() {
                     <Input
                       id="range-change"
                       name="범위변동"
-                      type="number"
                       step="0.01"
                       value={contractInfo.범위변동 || ""}
                       onChange={handleInputChange}
@@ -704,76 +725,18 @@ function LeaseAIAnalysisContent() {
             <DialogTitle className="text-2xl font-bold text-gray-900">AI 분석 결과</DialogTitle>
           </DialogHeader>
           <div className="mt-6 space-y-8">
-            <section>
-              <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">계약서 분석 결과</h3>
-              <div className="space-y-6">
-                <div>
-                  <h4 className="text-lg font-semibold mb-3 text-gray-700">리스 해당 여부 분석:</h4>
-                  <ul className="list-disc pl-5 space-y-2 text-gray-600">
-                    <li><span className="font-medium text-gray-700">식별된 자산:</span> 서울특별시 강남구 테헤란로 108길 42에 위치한 엠디엔타워 지상 2층</li>
-                    <li><span className="font-medium text-gray-700">사용통제권:</span> 계약서 제1조에 따라 전차인은 해당 목적물을 전용으로 사용할 권리가 있음</li>
-                    <li><span className="font-medium text-gray-700">대가:</span> 보증금과 월 임대료가 명시되어 있음</li>
-                    <li><span className="font-medium text-gray-700">기간:</span> 명확한 리스기간이 설정되어 있음 (2022.8.1 ~ 2023.9.30)</li>
-                  </ul>
-                  <p className="mt-3 font-semibold text-green-600">→ IFRS 16의 리스 정의 요건을 충족하므로 리스에 해당함</p>
-                </div>
+            {aiAnalysisHtml ? (
+              <div 
+                className="analysis-content"
+                dangerouslySetInnerHTML={{ 
+                  __html: aiAnalysisHtml.replace(/className=/g, 'class=')  // className을 class로 변환
+                }} 
+              />
+            ) : (
+              <div className="text-center text-gray-500">
+                분석 결과가 없습니다.
               </div>
-            </section>
-
-            <section>
-              <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">주요 계약 정보</h3>
-              <div className="space-y-4 text-gray-600">
-                <p><span className="font-medium text-gray-700">리스명:</span> 엠디엔타워 사무실 임대차계약</p>
-                <div>
-                  <p className="font-medium text-gray-700 mb-2">리스기간:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>최초계약: 2022.8.1 ~ 2023.9.30 (14개월)</li>
-                    <li>자동연장옵션: 계약만료 30일 전까지 별도 의사표시 없으면 1년씩 자동연장</li>
-                    <li>최대 가능 연장기간: 2028.9.30까지</li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="font-medium text-gray-700 mb-2">리스금액:</p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>보증금: ￦635,069,587</li>
-                    <li>월 임대료: ￦97,858,933</li>
-                  </ul>
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">사용자(리스이용자) 주의사항</h3>
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-lg font-semibold mb-2 text-gray-700">계약 관련:</h4>
-                  <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                    <li>전대차 금지 조항: 임대인의 사전 동의 없이 제3자 사용 금지</li>
-                    <li>용도제한: 계약서상 정해진 용도로만 사용해야 함</li>
-                    <li>원상복구 의무: 계약 종료/해지 시 원상복구 필요</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-lg font-semibold mb-2 text-gray-700">비용 관련:</h4>
-                  <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                    <li>관리비 정산: 실제 사용량에 따른 추가정산 가능성</li>
-                    <li>연체료: 지연손해금 부과 가능성</li>
-                    <li>공과금 및 제세공과금 부담 책임</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4 className="text-lg font-semibold mb-2 text-gray-700">계약 해지 관련:</h4>
-                  <ul className="list-disc pl-5 space-y-1 text-gray-600">
-                    <li>계약해지 사유 숙지 필요</li>
-                    <li>해지 시 위약금 및 손해배상 책임 발생 가능</li>
-                  </ul>
-                </div>
-              </div>
-            </section>
-
-            <p className="mt-6 text-gray-700 font-medium bg-yellow-100 p-4 rounded-md">
-              이러한 조항들은 재무적, 운영적으로 중요한 영향을 미칠 수 있으므로 특별한 주의가 필요합니다.
-            </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
